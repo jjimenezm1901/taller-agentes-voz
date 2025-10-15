@@ -54,13 +54,13 @@ class Assistant(Agent):
                 - **Concisión Extrema:** Usa frases cortas y directas. Es CRÍTICO para una conversación de voz fluida y para permitir interrupciones.
                 - **Claridad Absoluta:** Habla de forma pausada y clara. Evita la jerga técnica. Traduce características en beneficios.
 
-                ## Herramientas (vía MCP)
-                - `buscar_en_base_de_conocimiento`: Para responder preguntas generales sobre la empresa, financiamiento, horarios, garantía, etc. Usa esto para cualquier pregunta que no sea sobre el stock específico de un auto.
+                ## Herramientas
+                - `buscar_en_base_de_conocimiento`: Usa SIEMPRE esta herramienta para responder preguntas generales sobre la empresa, financiamiento, horarios, garantía, etc. Usa esto para cualquier pregunta.
                 - `consultar_inventario`: Para buscar en nuestra hoja de Google Sheets si un vehículo específico está disponible.
                 - `guardar_prospecto`: Guarda los datos de un cliente interesado en nuestra hoja de "Prospectos". **Úsalo inmediatamente** después de obtener el nombre y teléfono.
                 - `consultar_horarios_disponibles`: Revisa los horarios libres en nuestro calendario para agendar una prueba de manejo.
                 - `agendar_cita`: Confirma y crea la cita en el calendario.
-
+                - `end_call`: Termina la llamada.
                 ## REGLA DE ORO: CÓMO HABLAR Y USAR HERRAMIENTAS
                 Esta es tu directiva más importante para sonar humano y no un robot. Cuando necesites usar una herramienta para buscar información, tu respuesta SIEMPRE tiene dos partes simultáneas:
 
@@ -158,7 +158,47 @@ class Assistant(Agent):
         except Exception as e:
             logger.error(f"Error en buscar_en_base_de_conocimiento: {e}")
             return f"Lo siento, estoy teniendo problemas para consultar la información. Por favor, intenta de nuevo o contacta con nuestro servicio al cliente."
+    @function_tool()
+    async def end_call(self, ctx: RunContext):
+        """Called when the user wants to end the call or when the conversation is complete"""
+        logger.info(f"[TOOL] end_call iniciada - participante: {self.participant.identity if self.participant else 'None'}")
+        logger.info(f"[TOOL] end_call - contexto: {ctx}")
 
+        # Inform the user that the call is ending
+        logger.info(f"[TOOL] end_call - generando mensaje de despedida")
+        await ctx.session.generate_reply(
+            instructions="Gracias por tu tiempo. Ha sido un placer ayudarte. La llamada está terminando."
+        )
+
+        # let the agent finish speaking
+        current_speech = ctx.session.current_speech
+        if current_speech:
+            logger.info(f"[TOOL] end_call - esperando que termine el speech actual")
+            await current_speech.wait_for_playout()
+
+        logger.info(f"[TOOL] end_call - colgando llamada")
+        await self.hangup()
+        logger.info(f"[TOOL] end_call - llamada terminada exitosamente")
+        return "llamada terminada exitosamente"
+
+    async def hangup(self):
+        """Helper function to hang up the call by deleting the room"""
+
+        job_ctx = get_job_context()
+        if job_ctx is None:
+            # Not running in a job context
+            return
+        
+        try:
+            await job_ctx.api.room.delete_room(
+                api.DeleteRoomRequest(
+                    room=job_ctx.room.name,
+                )
+            )
+            logger.info("Room deleted successfully")
+        except Exception as e:
+            logger.error(f"Error deleting room: {e}")
+            # Continue anyway to avoid hanging
 
 async def entrypoint(ctx: agents.JobContext):
     try:
@@ -222,4 +262,8 @@ async def entrypoint(ctx: agents.JobContext):
         raise
 
 if __name__ == "__main__":
-    agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint, initialize_process_timeout=60))
+    agents.cli.run_app(agents.WorkerOptions(
+        entrypoint_fnc=entrypoint, 
+        initialize_process_timeout=60,
+        agent_name="autofuturo-ia",
+    ))

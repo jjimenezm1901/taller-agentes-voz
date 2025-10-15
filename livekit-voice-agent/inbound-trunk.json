@@ -1,0 +1,10 @@
+{
+    "trunk": {
+      "SIPTrunkID": "ST_LgrCQTbQNPxc",
+      "name": "Trunk twilio",
+      "numbers": [
+        "+13023293087"
+      ],
+      "krispEnabled": true
+    }
+  }
