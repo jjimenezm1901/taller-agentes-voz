@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 import os
 import logging
-from livekit import agents, rtc, api
-from livekit.agents import AgentSession, Agent, RoomInputOptions, mcp, function_tool, get_job_context
+from livekit import agents
+from livekit.agents import AgentSession, Agent, RoomInputOptions, mcp, function_tool
 from livekit.agents.voice import RunContext
 from livekit.plugins import noise_cancellation, silero, deepgram
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
@@ -46,7 +46,6 @@ class Assistant(Agent):
             
         super().__init__(
             instructions="""
-                Hoy es {datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-5))).strftime('%A, %d de %B de %Y, %H:%M %p (UTC-5)')}.
                 ## Rol y Objetivo Principal
                 Eres **Alex**, el asistente virtual de la concesionaria **AutoFuturo IA**. Eres amable, profesional y muy eficiente. Tu **objetivo principal e irrenunciable** es despertar el interés del cliente en nuestros vehículos y **conseguir que agende una cita presencial** para una prueba de manejo o para recibir asesoría personalizada en nuestra sucursal. Toda la conversación debe dirigirse hacia ese fin.
 
@@ -55,13 +54,13 @@ class Assistant(Agent):
                 - **Concisión Extrema:** Usa frases cortas y directas. Es CRÍTICO para una conversación de voz fluida y para permitir interrupciones.
                 - **Claridad Absoluta:** Habla de forma pausada y clara. Evita la jerga técnica. Traduce características en beneficios.
 
-                ## Herramientas
-                - `buscar_en_base_de_conocimiento`: Usa SIEMPRE esta herramienta para responder preguntas generales sobre la empresa, financiamiento, horarios, garantía, etc. Usa esto para cualquier pregunta.
+                ## Herramientas (vía MCP)
+                - `buscar_en_base_de_conocimiento`: Para responder preguntas generales sobre la empresa, financiamiento, horarios, garantía, etc. Usa esto para cualquier pregunta que no sea sobre el stock específico de un auto.
                 - `consultar_inventario`: Para buscar en nuestra hoja de Google Sheets si un vehículo específico está disponible.
                 - `guardar_prospecto`: Guarda los datos de un cliente interesado en nuestra hoja de "Prospectos". **Úsalo inmediatamente** después de obtener el nombre y teléfono.
                 - `consultar_horarios_disponibles`: Revisa los horarios libres en nuestro calendario para agendar una prueba de manejo.
                 - `agendar_cita`: Confirma y crea la cita en el calendario.
-                - `end_call`: Termina la llamada.
+
                 ## REGLA DE ORO: CÓMO HABLAR Y USAR HERRAMIENTAS
                 Esta es tu directiva más importante para sonar humano y no un robot. Cuando necesites usar una herramienta para buscar información, tu respuesta SIEMPRE tiene dos partes simultáneas:
 
@@ -159,47 +158,7 @@ class Assistant(Agent):
         except Exception as e:
             logger.error(f"Error en buscar_en_base_de_conocimiento: {e}")
             return f"Lo siento, estoy teniendo problemas para consultar la información. Por favor, intenta de nuevo o contacta con nuestro servicio al cliente."
-    @function_tool()
-    async def end_call(self, ctx: RunContext):
-        """Called when the user wants to end the call or when the conversation is complete"""
-        #logger.info(f"[TOOL] end_call iniciada - participante: {self.participant.identity if self.participant else 'None'}")
-        #logger.info(f"[TOOL] end_call - contexto: {ctx}")
 
-        # Inform the user that the call is ending
-        logger.info(f"[TOOL] end_call - generando mensaje de despedida")
-        await ctx.session.generate_reply(
-            instructions="Gracias por tu tiempo. Ha sido un placer ayudarte. La llamada está terminando."
-        )
-
-        # let the agent finish speaking
-        current_speech = ctx.session.current_speech
-        if current_speech:
-            logger.info(f"[TOOL] end_call - esperando que termine el speech actual")
-            await current_speech.wait_for_playout()
-
-        logger.info(f"[TOOL] end_call - colgando llamada")
-        await self.hangup()
-        logger.info(f"[TOOL] end_call - llamada terminada exitosamente")
-        return "llamada terminada exitosamente"
-
-    async def hangup(self):
-        """Helper function to hang up the call by deleting the room"""
-
-        job_ctx = get_job_context()
-        if job_ctx is None:
-            # Not running in a job context
-            return
-        
-        try:
-            await job_ctx.api.room.delete_room(
-                api.DeleteRoomRequest(
-                    room=job_ctx.room.name,
-                )
-            )
-            logger.info("Room deleted successfully")
-        except Exception as e:
-            logger.error(f"Error deleting room: {e}")
-            # Continue anyway to avoid hanging
 
 async def entrypoint(ctx: agents.JobContext):
     try:
@@ -263,8 +222,4 @@ async def entrypoint(ctx: agents.JobContext):
         raise
 
 if __name__ == "__main__":
-    agents.cli.run_app(agents.WorkerOptions(
-        entrypoint_fnc=entrypoint, 
-        initialize_process_timeout=120,
-        agent_name="autofuturo-ia",
-    ))
+    agents.cli.run_app(agents.WorkerOptions(entrypoint_fnc=entrypoint, initialize_process_timeout=60))

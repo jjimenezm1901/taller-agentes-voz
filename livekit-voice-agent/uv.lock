@@ -1048,6 +1048,18 @@ wheels = [
 ]
 
 [[package]]
+name = "livekit-plugins-elevenlabs"
+version = "1.2.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "livekit-agents", extra = ["codecs"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/96/f4/1fce5f7fba7a8d300cea99febc9832d75fe2c58aca9a8073efdda407109c/livekit_plugins_elevenlabs-1.2.14.tar.gz", hash = "sha256:5726be10e12859e469645e1b5a4792ae3250db14989a2cd0e130b2deb4005906", size = 12106, upload-time = "2025-10-01T17:55:22.551Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/46/1f5cfc3a201cd8908203248bfe8e69b338b5506a14d93b66dab135d8a67a/livekit_plugins_elevenlabs-1.2.14-py3-none-any.whl", hash = "sha256:ffe777bb62360570bed3ec4b134c6218dbe585088028fc0d74d514ca8e88aa29", size = 13978, upload-time = "2025-10-01T17:55:21.308Z" },
+]
+
+[[package]]
 name = "livekit-plugins-noise-cancellation"
 version = "0.2.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1113,6 +1125,7 @@ dependencies = [
     { name = "httpx" },
     { name = "livekit-agents", extra = ["mcp", "silero", "turn-detector"] },
     { name = "livekit-plugins-deepgram" },
+    { name = "livekit-plugins-elevenlabs" },
     { name = "livekit-plugins-noise-cancellation" },
     { name = "openai" },
     { name = "python-dotenv" },
@@ -1125,6 +1138,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.25.0" },
     { name = "livekit-agents", extras = ["mcp", "silero", "turn-detector"], specifier = "~=1.2" },
     { name = "livekit-plugins-deepgram", specifier = ">=1.2.14" },
+    { name = "livekit-plugins-elevenlabs", specifier = ">=1.2.14" },
     { name = "livekit-plugins-noise-cancellation", specifier = "~=0.2" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "python-dotenv", specifier = ">=1.1.1" },

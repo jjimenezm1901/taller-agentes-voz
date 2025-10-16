@@ -11,4 +11,5 @@ dependencies = [
     "httpx>=0.25.0",
     "supabase>=2.0.0",
     "openai>=1.0.0",
+    "livekit-plugins-elevenlabs>=1.2.14",
 ]
