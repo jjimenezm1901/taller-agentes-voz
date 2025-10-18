@@ -45,7 +45,7 @@ class Assistant(Agent):
             self._supabase_client = None
             
         super().__init__(
-            instructions="""
+            instructions=f"""
                 Hoy es {datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-5))).strftime('%A, %d de %B de %Y, %H:%M %p (UTC-5)')}.
                 ## Rol y Objetivo Principal
                 Eres **Alex**, el asistente virtual de la concesionaria **AutoFuturo IA**. Eres amable, profesional y muy eficiente. Tu **objetivo principal e irrenunciable** es despertar el interés del cliente en nuestros vehículos y **conseguir que agende una cita presencial** para una prueba de manejo o para recibir asesoría personalizada en nuestra sucursal. Toda la conversación debe dirigirse hacia ese fin.
@@ -169,6 +169,7 @@ class Assistant(Agent):
         logger.info(f"[TOOL] end_call - generando mensaje de despedida")
         await ctx.session.generate_reply(
             instructions="Gracias por tu tiempo. Ha sido un placer ayudarte. La llamada está terminando."
+
         )
 
         # let the agent finish speaking
@@ -203,6 +204,7 @@ class Assistant(Agent):
 
 async def entrypoint(ctx: agents.JobContext):
     try:
+
         print("## Iniciando agente de voz...")
         
         # Verificar API keys antes de continuar
@@ -237,6 +239,53 @@ async def entrypoint(ctx: agents.JobContext):
             turn_detection=MultilingualModel(),
             mcp_servers=mcp_servers,
         )
+        """
+        session = AgentSession(
+            # LLM y STT sin cambios
+            llm=openai.LLM(
+                model="gpt-4.1-mini",
+                timeout=60
+            ),
+            stt=deepgram.STT(model="nova-3", language="es"),
+
+            # TTS con ElevenLabs (usar voz por defecto del SDK para evitar IDs inválidos)
+            tts=elevenlabs.TTS(
+                model="eleven_turbo_v2_5",
+                voice_id="b2htR0pMe28pYwCY9gnP",
+                language="es"
+            ),
+
+            # VAD hiper-sensible
+            vad=silero.VAD.load(
+                min_silence_duration=0.25, # Mantenemos esto bajo para que el agente responda rápido
+                min_speech_duration=0.1,   # Detecta incluso los fragmentos de habla más cortos
+                activation_threshold=0.25, # Umbral muy bajo para detectar la voz del usuario al instante
+                prefix_padding_duration=0.1,
+                max_buffered_speech=60.0,
+                force_cpu=True
+            ),
+
+            # Habilitar el modelo de detección de turnos sigue siendo crucial
+            turn_detection=MultilingualModel(),
+
+            # LA CLAVE: HABILITAR GENERACIÓN PREEMPTIVA
+            preemptive_generation=True,
+
+            # Endpointing se mantiene
+            min_endpointing_delay=0.2,
+            max_endpointing_delay=3.0,
+
+            # Interrupciones hiper-reactivas
+            allow_interruptions=True,
+            discard_audio_if_uninterruptible=True,
+            min_interruption_duration=0.15,  # Detecta interrupciones casi instantáneamente
+            min_interruption_words=1,        # Una sola palabra es suficiente para interrumpir
+            min_consecutive_speech_delay=0.1, # Mínima pausa entre turnos
+
+            # El resto se mantiene igual
+            max_tool_steps=3,
+            mcp_servers=mcp_servers
+        )"""
 
         print("## Iniciando sesión...")
         await session.start(
