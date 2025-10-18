@@ -249,6 +249,7 @@ async def entrypoint(ctx: agents.JobContext):
             stt=deepgram.STT(model="nova-3", language="es"),
 
             # TTS con ElevenLabs (usar voz por defecto del SDK para evitar IDs inválidos)
+            # Para instalar el plugin de eleven labs ejecutar: "uv add livekit-plugins-elevenlabs"  y el otro comando "uv add elevenlabs"
             tts=elevenlabs.TTS(
                 model="eleven_turbo_v2_5",
                 voice_id="b2htR0pMe28pYwCY9gnP",
