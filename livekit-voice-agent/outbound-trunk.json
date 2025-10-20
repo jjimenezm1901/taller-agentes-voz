@@ -1,0 +1,9 @@
+{
+    "trunk": {
+      "name": "Taller Out",
+      "address": "talleragentesvoz.pstn.twilio.com",
+      "numbers": ["+13023293087"],
+      "authUsername": "talleragentesvoz",
+      "authPassword": "TallerAgentesVoz2025"
+    }
+  }

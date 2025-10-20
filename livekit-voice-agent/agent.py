@@ -4,7 +4,7 @@ import logging
 from livekit import agents, rtc, api
 from livekit.agents import AgentSession, Agent, RoomInputOptions, mcp, function_tool, get_job_context
 from livekit.agents.voice import RunContext
-from livekit.plugins import noise_cancellation, silero, deepgram
+from livekit.plugins import noise_cancellation, silero, deepgram, elevenlabs
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from supabase import create_client, Client
 from openai import AsyncOpenAI
