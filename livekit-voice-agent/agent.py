@@ -12,7 +12,7 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from supabase import create_client, Client
 from openai import AsyncOpenAI
 
-load_dotenv(".env.local")
+load_dotenv()
 
 # Configuración del logger
 logging.basicConfig(level=logging.INFO)
@@ -340,39 +340,43 @@ async def entrypoint(ctx: agents.JobContext):
                 metadata_str = re.sub(r'(\w+):', r'"\1":', metadata_str)
                 
                 # Manejar valores que pueden contener espacios y caracteres especiales
-                # Buscar patrones como: "key": valor_sin_comillas y envolver el valor en comillas
-                def quote_values(match):
-                    key = match.group(1)
-                    value = match.group(2).strip()
-                    # Si el valor ya está entre comillas, no hacer nada
-                    if value.startswith('"') and value.endswith('"'):
-                        return match.group(0)
-                    # Si el valor contiene espacios o caracteres especiales, envolver en comillas
-                    return f'"{key}": "{value}"'
+                # El problema es que la metadata se está cortando, necesitamos parsear lo que tenemos
                 
-                metadata_str = re.sub(r'"(\w+)":\s*([^,}]+)', quote_values, metadata_str)
-                logger.info(f"[ENTRYPOINT] Metadata procesada: {metadata_str}")
-                
-                try:
-                    dial_info = json.loads(metadata_str)
-                    logger.info(f"[ENTRYPOINT] Metadata parseada como CLI: {dial_info}")
-                except json.JSONDecodeError as e:
-                    logger.error(f"[ENTRYPOINT] Error parseando metadata CLI: {e}")
-                    logger.error(f"[ENTRYPOINT] Metadata problemática: {metadata_str}")
-                    # Intentar parseo manual como último recurso
-                    dial_info = {}
-                    # Buscar phone_number específicamente
-                    phone_match = re.search(r'phone_number["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
-                    if phone_match:
-                        dial_info["phone_number"] = phone_match.group(1).strip('"\'')
-                        # Buscar otros campos
-                        name_match = re.search(r'name["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
-                        if name_match:
-                            dial_info["name"] = name_match.group(1).strip('"\'')
-                        appointment_match = re.search(r'appointment_time["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
-                        if appointment_match:
-                            dial_info["appointment_time"] = appointment_match.group(1).strip('"\'')
-                    logger.info(f"[ENTRYPOINT] Parseo manual: {dial_info}")
+                # Buscar phone_number específicamente
+                phone_match = re.search(r'phone_number["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
+                if phone_match:
+                    phone_number = phone_match.group(1).strip('"\'')
+                    dial_info = {"phone_number": phone_number}
+                    
+                    # Buscar name si existe
+                    name_match = re.search(r'name["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
+                    if name_match:
+                        dial_info["name"] = name_match.group(1).strip('"\'')
+                    
+                    # Buscar appointment_time si existe
+                    appointment_match = re.search(r'appointment_time["\']?\s*:\s*["\']?([^,}]+)', metadata_str)
+                    if appointment_match:
+                        dial_info["appointment_time"] = appointment_match.group(1).strip('"\'')
+                    
+                    logger.info(f"[ENTRYPOINT] Metadata parseada manualmente: {dial_info}")
+                else:
+                    # Si no encontramos phone_number, intentar parseo JSON normal
+                    def quote_values(match):
+                        key = match.group(1)
+                        value = match.group(2).strip()
+                        if value.startswith('"') and value.endswith('"'):
+                            return match.group(0)
+                        return f'"{key}": "{value}"'
+                    
+                    metadata_str = re.sub(r'"(\w+)":\s*([^,}]+)', quote_values, metadata_str)
+                    logger.info(f"[ENTRYPOINT] Metadata procesada: {metadata_str}")
+                    
+                    try:
+                        dial_info = json.loads(metadata_str)
+                        logger.info(f"[ENTRYPOINT] Metadata parseada como CLI: {dial_info}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"[ENTRYPOINT] Error parseando metadata CLI: {e}")
+                        dial_info = {}
             
             if dial_info and "phone_number" in dial_info:
                 is_outbound = True
